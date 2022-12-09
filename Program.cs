@@ -1,27 +1,15 @@
-﻿using databaseAPI;
-using EASendMail;
-using GNAchartingtools;
+﻿using System.Configuration;
+
 using GNAgeneraltools;
+
 using GNAspreadsheettools;
 
 using OfficeOpenXml;
-
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Globalization;
-
-using GNAspreadsheettools;
 
 //using Twilio;
 //using Twilio.Rest.Api.V2010.Account;
 //using Twilio.Types;
 
-using IO.ClickSend.ClickSend.Api;
-using IO.ClickSend.Client;
-using IO.ClickSend.ClickSend.Model;
-using System.Collections.Immutable;
-using System.Drawing;
 
 namespace sortRails
 {
@@ -98,7 +86,11 @@ namespace sortRails
             string ATS;
 
             var prism = new List<Prism>();
-            var sortedprisms = new List<Prism>();
+            var sortedLeftRailprisms = new List<Prism>();
+            var sortedRightRailprisms = new List<Prism>();
+            int iLeftRailCounter = -1;
+            int iRightRailCounter = -1;
+            var strRailFlag = "LeftRail";
 
             // read all prisms Left Rail Tag
             FileInfo newFile = new FileInfo(strWorkbookFullPath);
@@ -118,7 +110,6 @@ namespace sortRails
                 do
                 {
                     Console.WriteLine("   Tag: "+ strTag[j]);
-
                     do
                     {
                         strName = Convert.ToString(worksheet.Cells[iRow, iCol].Value);
@@ -145,50 +136,115 @@ namespace sortRails
                         return x.Name.CompareTo(y.Name);
                     });
 
-                    i = 0;
-                    do
+                    if (strRailFlag == "RightRail")
                     {
-                        strName = prism[i].Name;
-                        dblE = prism[i].E;
-                        dblN = prism[i].N;
-                        dblH = prism[i].H;
-                        ATS = prism[i].ATS;
-                        sortedprisms.Add(new Prism() { Name = strName, E = dblE, N = dblN, H = dblH, ATS = ATS });
-                        i++;
-                    } while (prism[i].Name.Trim() != "TheEnd");
+                        strRailFlag = "LeftRail";
+                        i = 0;
+                        do
+                        {
+                            strName = prism[i].Name;
+                            dblE = prism[i].E;
+                            dblN = prism[i].N;
+                            dblH = prism[i].H;
+                            ATS = prism[i].ATS;
+                            sortedRightRailprisms.Add(new Prism() { Name = strName, E = dblE, N = dblN, H = dblH, ATS = ATS });
+                            i++;
+                        } while (prism[i].Name.Trim() != "TheEnd");
 
-                    sortedprisms.Add(new Prism() { Name = "EoR=============================", E = 0, N = 0, H = 0, ATS = "EoR" });
-                    prism = new List<Prism>();
-                    iRow = Convert.ToInt16(strFirstDataRow);
-                    iPrismCounter = -1;
-                    j++;
+                        sortedRightRailprisms.Add(new Prism() { Name = "EoR=============================", E = 0, N = 0, H = 0, ATS = "EoR" });
+                        prism = new List<Prism>();
+                        iRow = Convert.ToInt16(strFirstDataRow);
+                        iPrismCounter = -1;
+                        j++;
+                    }
+                    else
+                    {
+                        strRailFlag = "RightRail";
+                        i = 0;
+                        do
+                        {
+                            strName = prism[i].Name;
+                            dblE = prism[i].E;
+                            dblN = prism[i].N;
+                            dblH = prism[i].H;
+                            ATS = prism[i].ATS;
+                            sortedLeftRailprisms.Add(new Prism() { Name = strName, E = dblE, N = dblN, H = dblH, ATS = ATS });
+                            i++;
+                        } while (prism[i].Name.Trim() != "TheEnd");
+
+                        sortedLeftRailprisms.Add(new Prism() { Name = "EoR=============================", E = 0, N = 0, H = 0, ATS = "EoR" });
+                        prism = new List<Prism>();
+                        iRow = Convert.ToInt16(strFirstDataRow);
+                        iPrismCounter = -1;
+                        j++;
+                    }
+
                 } while (strTag[j] != "None");
 
             } 
 
-            sortedprisms.Add(new Prism() { Name = "TheEnd", E = 0, N = 0, H = 0, ATS = "TheEnd" });
-
-            iRow = Convert.ToInt16(strFirstDataRow);
-            iCol = Convert.ToInt32(strNameColumn) + 7;
+            sortedLeftRailprisms.Add(new Prism() { Name = "TheEnd", E = 0, N = 0, H = 0, ATS = "TheEnd" });
+            sortedRightRailprisms.Add(new Prism() { Name = "TheEnd", E = 0, N = 0, H = 0, ATS = "TheEnd" });
 
             Console.WriteLine("3. Write data");
             i = 0;
             using (ExcelPackage package = new ExcelPackage(newFile))
             {
-
+                iRow = Convert.ToInt16(strFirstDataRow);
+                iCol = Convert.ToInt32(strNameColumn) + 7;
+                i = 0;
                 ExcelWorksheet worksheet = package.Workbook.Worksheets[strActiveWorksheet];
                 do
                 {
-                    worksheet.Cells[iRow, iCol].Value = sortedprisms[i].Name;
-                    worksheet.Cells[iRow, iCol+1].Value = sortedprisms[i].E;
-                    worksheet.Cells[iRow, iCol+2].Value = sortedprisms[i].N;
-                    worksheet.Cells[iRow, iCol+3].Value = sortedprisms[i].H;
-                    worksheet.Cells[iRow, iCol+4].Value = sortedprisms[i].ATS;
+                    worksheet.Cells[iRow, iCol].Value = sortedLeftRailprisms[i].Name;
+                    worksheet.Cells[iRow, iCol+1].Value = sortedLeftRailprisms[i].E;
+                    worksheet.Cells[iRow, iCol+2].Value = sortedLeftRailprisms[i].N;
+                    worksheet.Cells[iRow, iCol+3].Value = sortedLeftRailprisms[i].H;
+                    worksheet.Cells[iRow, iCol+4].Value = sortedLeftRailprisms[i].ATS;
+
+                    int iNextRow = iRow + 1;
+
+                    // string strFormula = "=((j" + Convert.ToString(iRow) + "-j" + Convert.ToString(iNextRow) + ")^2+(k" + Convert.ToString(iRow) + "-k" + Convert.ToString(iNextRow) + + ")^2)^0.5"
+
+
+                    string strFormula = "=ROUND(((J" + Convert.ToString(iRow) + "-J" + Convert.ToString(iNextRow) + ")^2+(K" + Convert.ToString(iRow) + "-K" + Convert.ToString(iNextRow) + ")^2)^0.5,2)";
+                    worksheet.Cells[iRow, iCol + 5].Formula = strFormula;
+
+                    strFormula = "=ROUND(((J"+ iRow +"-Q" + iRow +")^2+(K" +iRow+ "-R" +iRow+ ")^2)^0.5,2)";
+                    worksheet.Cells[iRow, iCol + 6].Formula = strFormula;
+
                     iRow++;
                     i++;
-                } while (sortedprisms[i].Name.Trim() != "TheEnd");
+                } while (sortedLeftRailprisms[i].Name.Trim() != "TheEnd");
+
+                iRow = Convert.ToInt16(strFirstDataRow);
+                iCol = Convert.ToInt32(strNameColumn) + 14;
+                i = 0;
+                do
+                {
+                    worksheet.Cells[iRow, iCol].Value = sortedRightRailprisms[i].Name;
+                    worksheet.Cells[iRow, iCol + 1].Value = sortedRightRailprisms[i].E;
+                    worksheet.Cells[iRow, iCol + 2].Value = sortedRightRailprisms[i].N;
+                    worksheet.Cells[iRow, iCol + 3].Value = sortedRightRailprisms[i].H;
+                    worksheet.Cells[iRow, iCol + 4].Value = sortedRightRailprisms[i].ATS;
+
+                    int iNextRow = iRow + 1;
+
+                    string strFormula = "=ROUND(((Q" + Convert.ToString(iRow) + "-Q" + Convert.ToString(iNextRow) + ")^2+(R" + Convert.ToString(iRow) + "-R" + Convert.ToString(iNextRow) + ")^2)^0.5,2)";
+                    worksheet.Cells[iRow, iCol + 5].Formula = strFormula;
+
+
+                    strFormula = "=ROUND((L" + Convert.ToString(iNextRow) + "-L" + Convert.ToString(iRow) + "),3)";
+                    worksheet.Cells[iRow, iCol + 6].Formula = strFormula;
+                    strFormula = "=ROUND((S" + Convert.ToString(iNextRow) + "-S" + Convert.ToString(iRow) + "),3)";
+                    worksheet.Cells[iRow, iCol + 7].Formula = strFormula;
+
+                    iRow++;
+                    i++;
+                } while (sortedRightRailprisms[i].Name.Trim() != "TheEnd");
 
                 try
+    
                 {
                     worksheet.Calculate();
                     package.Save();
@@ -199,7 +255,7 @@ namespace sortRails
                     Console.WriteLine("");
                     Console.WriteLine("Error:");
                     Console.WriteLine("sortRails: " + strWorkbookFullPath);
-                    Console.WriteLine("Please close the workbook and re-run the software.");
+                    Console.WriteLine("\nClose the workbook and re-run.");
                     Console.WriteLine("");
                     Console.WriteLine(ex);
                     Console.WriteLine("");
@@ -210,7 +266,7 @@ namespace sortRails
 
             }
 
-
+            ThatsAllFolks:
 
 
             Console.WriteLine("\nRails sorted & stored ...");
